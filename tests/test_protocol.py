@@ -154,8 +154,8 @@ class FakeDevice(threading.Thread):
                     seq = payload[:4]
                     assert payload[4] == 0x01, f"control action byte: {payload[4]:#x}"
                     self.flags.append(int.from_bytes(payload[5:9], "big"))
-                    self.buffer[:] = payload[9:57]  # 整块属性缓冲
-                    conn.sendall(giz.build_packet(0x94, seq + b"\x01"))
+                    self.buffer[0:24] = payload[9:33]  # 可写前缀
+                    conn.sendall(giz.build_packet(0x94, seq + b"\x01" + payload[5:9] + payload[9:33]))
 
 
 fake = FakeDevice()
@@ -173,7 +173,7 @@ dev = giz.GizwitsLocal("127.0.0.1", port=fake.port)
 after = dev.write(temp_pid=26.0)
 dev.close()
 check("写入帧数量", len(fake.writes), 1)
-check("写入帧长度", len(fake.writes[0]), 4 + 1 + 4 + 48)
+check("写入帧长度", len(fake.writes[0]), 4 + 1 + 4 + 24)
 check("action byte", fake.writes[0][4], 0x01)
 check("attrFlags(temp_pid id=10)", fake.flags[0], 1 << 10)  # 位图按 id 编号
 check("回读 temp_pid", after["temp_pid"], 26.0)

@@ -91,8 +91,8 @@ class FakeHeater(threading.Thread):
                     seq = payload[:4]
                     assert payload[4] == 0x01
                     flags.append(int.from_bytes(payload[5:9], "big"))
-                    self.buffer[:] = payload[9:57]
-                    conn.sendall(gizwits.build_packet(0x94, seq + b"\x01"))
+                    self.buffer[0:24] = payload[9:33]
+                    conn.sendall(gizwits.build_packet(0x94, seq + b"\x01" + payload[5:9] + payload[9:33]))
 
 
 class ListHandler(logging.Handler):
@@ -184,10 +184,10 @@ async def main() -> int:
     check("写入帧数 +1", write_count, before + 1)
     if writes:
         payload = writes[-1]
-        check("写入帧长度", len(payload), 57)
+        check("写入帧长度", len(payload), 33)
         check("action byte", payload[4], 0x01)
         check("attrFlags(temp_pid)", flags[-1], 1 << 10)
-        body = payload[9:57]
+        body = payload[9:33]
         check("temp_pid 已改", int.from_bytes(body[10:12], "big"), 2650)
         check("power_para1 未被破坏", int.from_bytes(body[20:24], "big"), 98636)
     await asyncio.sleep(0.5)

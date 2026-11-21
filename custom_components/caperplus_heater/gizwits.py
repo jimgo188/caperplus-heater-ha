@@ -31,6 +31,7 @@ from .const import (
     TCP_PORT,
     TEMP_FIELDS,
     UDP_PORT,
+    WRITABLE_LEN,
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -289,12 +290,14 @@ class GizwitsLocal:
         """Write datapoints with a Gizwits partial-update control frame.
 
         Frame payload (cmd 0x93), per the Gizwits p0 protocol:
-            seq(4B) + 0x01 (control action) + attrFlags(bitmap) + attrVals(48B)
+            seq(4B) + 0x01 (control action) + attrFlags(bitmap) + attrVals
 
-        attrFlags is a big-endian bitmap indexed by datapoint id; attrVals is the
-        *complete* attribute buffer, so it is read first and only the target
-        field is patched. Sending a short or zeroed buffer wipes power_para1 (the
-        power calibration value) — this heater stores 98636 there.
+        attrFlags is a big-endian bitmap indexed by datapoint id. attrVals must be
+        the *writable prefix* of the attribute buffer (here 24 bytes, ending at
+        power_para1) — this heater silently ignores a frame that also carries the
+        read-only tail, answering only with the sequence number. The buffer is
+        read first and only the target field is patched, so power_para1 (power
+        calibration, 98636) survives.
 
         Returns the state read back from the device. Raises GizwitsError unless
         the readback actually shows the new value: the ACK alone proves nothing.
@@ -327,7 +330,7 @@ class GizwitsLocal:
 
         flag_bytes = max(ATTR_IDS.values()) // 8 + 1
         seq = struct.pack(">I", int(time.time() * 1000) & 0xFFFF)
-        payload = seq + b"\x01" + flags.to_bytes(flag_bytes, "big") + bytes(raw)
+        payload = seq + b"\x01" + flags.to_bytes(flag_bytes, "big") + bytes(raw[:WRITABLE_LEN])
 
         got, resp = self._request(0x93, payload, want=(0x93, 0x94))
         _LOGGER.debug("控制帧 %s → 应答 cmd=0x%02x %s", payload.hex(), got, resp.hex())
