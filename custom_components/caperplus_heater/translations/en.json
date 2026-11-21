@@ -1,0 +1,60 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Caperplus heater (鱼乐世界)",
+        "description": "The heater must be on the same LAN as Home Assistant. Leave the IP empty to discover it over UDP broadcast. Close the device page in the vendor app first.",
+        "data": {
+          "host": "Device IP (empty = auto-discover)",
+          "name": "Name"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Cannot reach the device. Check the IP, the network, and whether the vendor app holds the connection.",
+      "multiple_devices": "More than one device answered; please enter the IP.",
+      "unknown": "Unexpected error, see the log."
+    },
+    "abort": {
+      "already_configured": "This device is already configured."
+    }
+  },
+  "entity": {
+    "climate": {
+      "thermostat": {
+        "name": "Thermostat"
+      }
+    },
+    "sensor": {
+      "water_temperature": {
+        "name": "Water temperature"
+      },
+      "power": {
+        "name": "Heating power"
+      },
+      "probe1": {
+        "name": "Probe 1"
+      },
+      "probe2": {
+        "name": "Probe 2"
+      },
+      "signal": {
+        "name": "Signal"
+      },
+      "run_time": {
+        "name": "Run time"
+      }
+    },
+    "binary_sensor": {
+      "heating": {
+        "name": "Heating"
+      },
+      "water_out": {
+        "name": "Out of water"
+      },
+      "fault": {
+        "name": "Fault"
+      }
+    }
+  }
+}

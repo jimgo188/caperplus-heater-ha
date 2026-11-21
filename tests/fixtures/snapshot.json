@@ -1,0 +1,431 @@
+{
+  "product_key": "7eef63f981fd4a10ad967af20c5f5855",
+  "device": {
+    "ip": "192.168.1.50",
+    "mac": "aa:bb:cc:dd:ee:ff",
+    "firmware": "0403000G",
+    "product_name": "T1plus_2"
+  },
+  "captured_at": "2026-11-21 17:23:53",
+  "action_byte": "0x03",
+  "raw_hex": "24010000000100040000096008980d480af000000001814c070000000864000000000960096b0956002600000000009d",
+  "raw_len": 48,
+  "values": {
+    "to_mcu": {
+      "display_name": "to_mcu",
+      "data_type": "uint8",
+      "position": {
+        "byte_offset": 0,
+        "unit": "byte",
+        "len": 1,
+        "bit_offset": 0
+      },
+      "writable": true,
+      "raw_value": 36,
+      "value": 36
+    },
+    "temp_show": {
+      "display_name": "temp_show",
+      "data_type": "uint8",
+      "position": {
+        "byte_offset": 1,
+        "unit": "byte",
+        "len": 1,
+        "bit_offset": 0
+      },
+      "writable": true,
+      "raw_value": 1,
+      "value": 1
+    },
+    "temp_unit": {
+      "display_name": "temp_unit",
+      "data_type": "uint8",
+      "position": {
+        "byte_offset": 2,
+        "unit": "byte",
+        "len": 1,
+        "bit_offset": 0
+      },
+      "writable": true,
+      "raw_value": 0,
+      "value": 0
+    },
+    "temp_pcb": {
+      "display_name": "temp_pcb",
+      "data_type": "uint8",
+      "position": {
+        "byte_offset": 3,
+        "unit": "byte",
+        "len": 1,
+        "bit_offset": 0
+      },
+      "writable": true,
+      "raw_value": 0,
+      "value": 0
+    },
+    "dev_config": {
+      "display_name": "dev_config",
+      "data_type": "uint8",
+      "position": {
+        "byte_offset": 4,
+        "unit": "byte",
+        "len": 1,
+        "bit_offset": 0
+      },
+      "writable": true,
+      "raw_value": 0,
+      "value": 0
+    },
+    "dev_status": {
+      "display_name": "dev_status",
+      "data_type": "uint8",
+      "position": {
+        "byte_offset": 5,
+        "unit": "byte",
+        "len": 1,
+        "bit_offset": 0
+      },
+      "writable": true,
+      "raw_value": 1,
+      "value": 1
+    },
+    "treatment_mode": {
+      "display_name": "treatment_mode",
+      "data_type": "uint8",
+      "position": {
+        "byte_offset": 6,
+        "unit": "byte",
+        "len": 1,
+        "bit_offset": 0
+      },
+      "writable": true,
+      "raw_value": 0,
+      "value": 0
+    },
+    "treatment_para": {
+      "display_name": "treatment_para",
+      "data_type": "uint8",
+      "position": {
+        "byte_offset": 7,
+        "unit": "byte",
+        "len": 1,
+        "bit_offset": 0
+      },
+      "writable": true,
+      "raw_value": 4,
+      "value": 4
+    },
+    "reserved1": {
+      "display_name": "reserved1",
+      "data_type": "uint8",
+      "position": {
+        "byte_offset": 8,
+        "unit": "byte",
+        "len": 1,
+        "bit_offset": 0
+      },
+      "writable": true,
+      "raw_value": 0,
+      "value": 0
+    },
+    "reserved2": {
+      "display_name": "reserved2",
+      "data_type": "uint8",
+      "position": {
+        "byte_offset": 9,
+        "unit": "byte",
+        "len": 1,
+        "bit_offset": 0
+      },
+      "writable": true,
+      "raw_value": 0,
+      "value": 0
+    },
+    "temp_pid": {
+      "display_name": "temp_pid",
+      "data_type": "uint16",
+      "position": {
+        "byte_offset": 10,
+        "unit": "byte",
+        "len": 2,
+        "bit_offset": 0
+      },
+      "writable": true,
+      "raw_value": 2400,
+      "value": 24.0
+    },
+    "temp_min": {
+      "display_name": "temp_min",
+      "data_type": "uint16",
+      "position": {
+        "byte_offset": 12,
+        "unit": "byte",
+        "len": 2,
+        "bit_offset": 0
+      },
+      "writable": true,
+      "raw_value": 2200,
+      "value": 22.0
+    },
+    "temp_max": {
+      "display_name": "temp_max",
+      "data_type": "uint16",
+      "position": {
+        "byte_offset": 14,
+        "unit": "byte",
+        "len": 2,
+        "bit_offset": 0
+      },
+      "writable": true,
+      "raw_value": 3400,
+      "value": 34.0
+    },
+    "treatment_temp": {
+      "display_name": "treatment_temp",
+      "data_type": "uint16",
+      "position": {
+        "byte_offset": 16,
+        "unit": "byte",
+        "len": 2,
+        "bit_offset": 0
+      },
+      "writable": true,
+      "raw_value": 2800,
+      "value": 28.0
+    },
+    "power_para2": {
+      "display_name": "power_para2",
+      "data_type": "uint16",
+      "position": {
+        "byte_offset": 18,
+        "unit": "byte",
+        "len": 2,
+        "bit_offset": 0
+      },
+      "writable": true,
+      "raw_value": 0,
+      "value": 0
+    },
+    "power_para1": {
+      "display_name": "power_para1",
+      "data_type": "uint32",
+      "position": {
+        "byte_offset": 20,
+        "unit": "byte",
+        "len": 4,
+        "bit_offset": 0
+      },
+      "writable": true,
+      "raw_value": 98636,
+      "value": 98636
+    },
+    "rssi": {
+      "display_name": "rssi",
+      "data_type": "uint8",
+      "position": {
+        "byte_offset": 24,
+        "unit": "byte",
+        "len": 1,
+        "bit_offset": 0
+      },
+      "writable": false,
+      "raw_value": 7,
+      "value": 7
+    },
+    "to_app": {
+      "display_name": "to_app",
+      "data_type": "uint8",
+      "position": {
+        "byte_offset": 25,
+        "unit": "byte",
+        "len": 1,
+        "bit_offset": 0
+      },
+      "writable": false,
+      "raw_value": 0,
+      "value": 0
+    },
+    "to_server": {
+      "display_name": "to_server",
+      "data_type": "uint8",
+      "position": {
+        "byte_offset": 26,
+        "unit": "byte",
+        "len": 1,
+        "bit_offset": 0
+      },
+      "writable": false,
+      "raw_value": 0,
+      "value": 0
+    },
+    "push": {
+      "display_name": "push",
+      "data_type": "uint8",
+      "position": {
+        "byte_offset": 27,
+        "unit": "byte",
+        "len": 1,
+        "bit_offset": 0
+      },
+      "writable": false,
+      "raw_value": 0,
+      "value": 0
+    },
+    "pid_param": {
+      "display_name": "pid_param",
+      "data_type": "uint8",
+      "position": {
+        "byte_offset": 28,
+        "unit": "byte",
+        "len": 1,
+        "bit_offset": 0
+      },
+      "writable": false,
+      "raw_value": 8,
+      "value": 8
+    },
+    "power_freq": {
+      "display_name": "power_freq",
+      "data_type": "uint8",
+      "position": {
+        "byte_offset": 29,
+        "unit": "byte",
+        "len": 1,
+        "bit_offset": 0
+      },
+      "writable": false,
+      "raw_value": 100,
+      "value": 100
+    },
+    "fault_temp": {
+      "display_name": "fault_temp",
+      "data_type": "uint8",
+      "position": {
+        "byte_offset": 30,
+        "unit": "byte",
+        "len": 1,
+        "bit_offset": 0
+      },
+      "writable": false,
+      "raw_value": 0,
+      "value": 0
+    },
+    "fault_heater": {
+      "display_name": "fault_heater",
+      "data_type": "uint8",
+      "position": {
+        "byte_offset": 31,
+        "unit": "byte",
+        "len": 1,
+        "bit_offset": 0
+      },
+      "writable": false,
+      "raw_value": 0,
+      "value": 0
+    },
+    "fault_power": {
+      "display_name": "fault_power",
+      "data_type": "uint8",
+      "position": {
+        "byte_offset": 32,
+        "unit": "byte",
+        "len": 1,
+        "bit_offset": 0
+      },
+      "writable": false,
+      "raw_value": 0,
+      "value": 0
+    },
+    "fault_zero": {
+      "display_name": "fault_zero",
+      "data_type": "uint8",
+      "position": {
+        "byte_offset": 33,
+        "unit": "byte",
+        "len": 1,
+        "bit_offset": 0
+      },
+      "writable": false,
+      "raw_value": 0,
+      "value": 0
+    },
+    "temp": {
+      "display_name": "temp",
+      "data_type": "uint16",
+      "position": {
+        "byte_offset": 34,
+        "unit": "byte",
+        "len": 2,
+        "bit_offset": 0
+      },
+      "writable": false,
+      "raw_value": 2400,
+      "value": 24.0
+    },
+    "temp1": {
+      "display_name": "temp1",
+      "data_type": "uint16",
+      "position": {
+        "byte_offset": 36,
+        "unit": "byte",
+        "len": 2,
+        "bit_offset": 0
+      },
+      "writable": false,
+      "raw_value": 2411,
+      "value": 24.11
+    },
+    "temp2": {
+      "display_name": "temp2",
+      "data_type": "uint16",
+      "position": {
+        "byte_offset": 38,
+        "unit": "byte",
+        "len": 2,
+        "bit_offset": 0
+      },
+      "writable": false,
+      "raw_value": 2390,
+      "value": 23.9
+    },
+    "power_value": {
+      "display_name": "power_value",
+      "data_type": "uint16",
+      "position": {
+        "byte_offset": 40,
+        "unit": "byte",
+        "len": 2,
+        "bit_offset": 0
+      },
+      "writable": false,
+      "raw_value": 38,
+      "value": 38
+    },
+    "power_consumption": {
+      "display_name": "power_consumption",
+      "data_type": "uint16",
+      "position": {
+        "byte_offset": 42,
+        "unit": "byte",
+        "len": 2,
+        "bit_offset": 0
+      },
+      "writable": false,
+      "raw_value": 0,
+      "value": 0
+    },
+    "run_time": {
+      "display_name": "run_time",
+      "data_type": "uint32",
+      "position": {
+        "byte_offset": 44,
+        "unit": "byte",
+        "len": 4,
+        "bit_offset": 0
+      },
+      "writable": false,
+      "raw_value": 157,
+      "value": 157
+    }
+  }
+}

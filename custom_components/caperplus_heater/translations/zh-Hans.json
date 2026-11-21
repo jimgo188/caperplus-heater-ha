@@ -1,0 +1,60 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "光特亿加热棒（鱼乐世界）",
+        "description": "和鱼缸在同一局域网。IP 可留空，用 UDP 广播自动发现；建议在路由器里给它固定 IP。添加前请先在鱼乐世界 App 里退出该设备的详情页。",
+        "data": {
+          "host": "设备 IP（可留空自动发现）",
+          "name": "名称"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "连不上设备。确认 IP 正确、和 HA 同一网段、App 没占用设备。",
+      "multiple_devices": "广播发现到多台设备，请填写具体 IP。",
+      "unknown": "意外错误，详见日志。"
+    },
+    "abort": {
+      "already_configured": "这台设备已经添加过了。"
+    }
+  },
+  "entity": {
+    "climate": {
+      "thermostat": {
+        "name": "温控"
+      }
+    },
+    "sensor": {
+      "water_temperature": {
+        "name": "水温"
+      },
+      "power": {
+        "name": "加热功率"
+      },
+      "probe1": {
+        "name": "探头1"
+      },
+      "probe2": {
+        "name": "探头2"
+      },
+      "signal": {
+        "name": "信号"
+      },
+      "run_time": {
+        "name": "运行时间"
+      }
+    },
+    "binary_sensor": {
+      "heating": {
+        "name": "加热中"
+      },
+      "water_out": {
+        "name": "离水保护"
+      },
+      "fault": {
+        "name": "故障"
+      }
+    }
+  }
+}
