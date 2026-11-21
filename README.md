@@ -59,10 +59,13 @@
 passcode 0x06 -> 0x07: uint16 BE len + passcode
 登录     0x08 -> 0x09: 首字节 0 成功（⚠ 设备会连发两个 0x09）
 读状态   0x90(0x02) -> 0x91: 动作码 + 48 字节
-写状态   0x93(整块 48 字节) -> 0x94: 首字节为返回码
+写状态   0x93 -> 0x94: 应答回带 seq
+         payload = seq(4B) + 0x01(控制动作) + attrFlags(4B 位图, 按数据点 id) + attrVals(48B)
 ```
 
-写入必须整块回写：先读一次、只改目标字节、其余原样发回。用全 0 缓冲区会清掉 `power_para1` 功率校准值。
+写入不是裸发 48 字节：必须带 4 字节 seq、控制动作字节 `0x01` 和 attrFlags 位图，否则设备会拒绝（这就是 v1.0.0 的 bug）。
+attrVals 仍是整块 48 字节：先读一次、只改目标字段、其余原样发回，用全 0 缓冲区会清掉 `power_para1` 功率校准值。
+写入成功与否只认回读值，不认 ACK。
 
 致谢：[chrisc123/jebao_aqua-homeassistant](https://github.com/chrisc123/jebao_aqua-homeassistant)、
 [richmirrely/ha-afire](https://github.com/richmirrely/ha-afire) —— 同平台的协议参考实现。

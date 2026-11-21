@@ -63,6 +63,10 @@ ATTRS: list[tuple[str, str, int, int, int, str, bool, str]] = [
     ("run_time", "uint32", 44, 4, 0, "byte", False, "运行小时"),
 ]
 
+# 机智云控制帧里的 attrFlags 位图按数据点 id 编号，id 即 ATTRS 的顺序（0..31）
+ATTR_IDS = {name: index for index, (name, *_rest) in enumerate(ATTRS)}
+ATTR_BY_NAME = {attr[0]: attr for attr in ATTRS}
+
 TEMP_FIELDS = {"temp", "temp1", "temp2", "temp_pid", "temp_min", "temp_max", "treatment_temp"}
 
 FAULT_FIELDS = ("fault_temp", "fault_heater", "fault_power", "fault_zero")

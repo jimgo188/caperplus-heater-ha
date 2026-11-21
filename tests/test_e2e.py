@@ -30,6 +30,7 @@ RAW = bytes.fromhex(json.loads(SNAPSHOT.read_text())["raw_hex"])
 CONFIG_DIR = "/tmp/ha-e2e"
 write_count = 0
 writes: list[bytes] = []
+flags: list[int] = []
 
 
 class FakeHeater(threading.Thread):
@@ -87,8 +88,11 @@ class FakeHeater(threading.Thread):
                 elif cmd == 0x93:
                     write_count += 1
                     writes.append(payload)
-                    self.buffer[:] = payload
-                    conn.sendall(gizwits.build_packet(0x94, b"\x00"))
+                    seq = payload[:4]
+                    assert payload[4] == 0x01
+                    flags.append(int.from_bytes(payload[5:9], "big"))
+                    self.buffer[:] = payload[9:57]
+                    conn.sendall(gizwits.build_packet(0x94, seq + b"\x01"))
 
 
 class ListHandler(logging.Handler):
@@ -180,9 +184,12 @@ async def main() -> int:
     check("写入帧数 +1", write_count, before + 1)
     if writes:
         payload = writes[-1]
-        check("写入帧长度", len(payload), 48)
-        check("temp_pid 已改", int.from_bytes(payload[10:12], "big"), 2650)
-        check("power_para1 未被破坏", int.from_bytes(payload[20:24], "big"), 98636)
+        check("写入帧长度", len(payload), 57)
+        check("action byte", payload[4], 0x01)
+        check("attrFlags(temp_pid)", flags[-1], 1 << 10)
+        body = payload[9:57]
+        check("temp_pid 已改", int.from_bytes(body[10:12], "big"), 2650)
+        check("power_para1 未被破坏", int.from_bytes(body[20:24], "big"), 98636)
     await asyncio.sleep(0.5)
     state = hass.states.get(climate_id)
     check("实体目标温度更新", state.attributes.get("temperature"), 26.5)
@@ -196,7 +203,7 @@ async def main() -> int:
     state = hass.states.get(climate_id)
     check("状态为 off", state.state, "off")
     if writes:
-        check("dev_config bit0 = 1", writes[-1][4] & 0x01, 1)
+        check("dev_config bit0 = 1", writes[-1][9 + 4] & 0x01, 1)
 
     print("6. 卸载", flush=True)
     unloaded = await hass.config_entries.async_unload(entry_id)

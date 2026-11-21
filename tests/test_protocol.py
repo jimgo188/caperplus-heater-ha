@@ -99,6 +99,7 @@ class FakeDevice(threading.Thread):
         super().__init__(daemon=True)
         self.buffer = bytearray(RAW)
         self.writes: list[bytes] = []
+        self.flags: list[int] = []
         self.sock = socket.socket()
         self.sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         self.sock.bind(("127.0.0.1", 0))
@@ -150,8 +151,11 @@ class FakeDevice(threading.Thread):
                     conn.sendall(giz.build_packet(0x91, b"\x03" + bytes(self.buffer)))
                 elif cmd == 0x93:
                     self.writes.append(payload)
-                    self.buffer[:] = payload  # 设备把整块存下来
-                    conn.sendall(giz.build_packet(0x94, b"\x00"))
+                    seq = payload[:4]
+                    assert payload[4] == 0x01, f"control action byte: {payload[4]:#x}"
+                    self.flags.append(int.from_bytes(payload[5:9], "big"))
+                    self.buffer[:] = payload[9:57]  # 整块属性缓冲
+                    conn.sendall(giz.build_packet(0x94, seq + b"\x01"))
 
 
 fake = FakeDevice()
@@ -166,11 +170,12 @@ check("read raw len", len(bytes.fromhex(read_back["raw"])), 48)
 
 # 写目标温度 26.00 °C
 dev = giz.GizwitsLocal("127.0.0.1", port=fake.port)
-ok, after = dev.write(temp_pid=26.0)
+after = dev.write(temp_pid=26.0)
 dev.close()
-check("write ok", ok, True)
 check("写入帧数量", len(fake.writes), 1)
-check("写入帧长度", len(fake.writes[0]), 48)
+check("写入帧长度", len(fake.writes[0]), 4 + 1 + 4 + 48)
+check("action byte", fake.writes[0][4], 0x01)
+check("attrFlags(temp_pid id=10)", fake.flags[0], 1 << 10)  # 位图按 id 编号
 check("回读 temp_pid", after["temp_pid"], 26.0)
 check("回写未破坏 power_para1", after["power_para1"], 98636)
 check("回写未破坏 temp_min", after["temp_min"], 22.0)
@@ -178,9 +183,9 @@ check("回写未破坏 run_time", after["run_time"], 157)
 
 # 暂停加热
 dev = giz.GizwitsLocal("127.0.0.1", port=fake.port)
-ok, after = dev.write(dev_config=1)
+after = dev.write(dev_config=1)
 dev.close()
-check("暂停 ok", ok, True)
+check("attrFlags(dev_config id=4)", fake.flags[-1], 0x10)
 check("暂停后 paused", bool(after["dev_config"] & 0x01), True)
 check("暂停后 dev_status 未变", after["dev_status"], 1)
 
@@ -190,7 +195,7 @@ try:
     dev.write(temp=30.0)
     check("只读字段被拒绝", "没有抛错", "GizwitsError")
 except giz.GizwitsError as err:
-    check("只读字段被拒绝", "temp" in str(err), True)
+    check("只读字段被拒绝", "只读" in str(err), True)
 finally:
     dev.close()
 

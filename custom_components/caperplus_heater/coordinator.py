@@ -61,10 +61,7 @@ class CaperplusCoordinator(DataUpdateCoordinator[dict]):
 
     def _write_once(self, values: dict) -> dict:
         with GizwitsLocal(self.host) as device:
-            ok, state = device.write(**values)
-        if not ok:
-            raise GizwitsError("设备拒绝了写入指令")
-        return state
+            return device.write(**values)
 
     # ---------------------------------------------------------------- control
     async def async_write(self, **values) -> None:

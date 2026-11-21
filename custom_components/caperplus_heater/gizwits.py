@@ -17,6 +17,7 @@ All I/O here is blocking on purpose: Home Assistant runs it in an executor.
 
 from __future__ import annotations
 
+import logging
 import socket
 import struct
 import time
@@ -31,6 +32,8 @@ from .const import (
     TEMP_FIELDS,
     UDP_PORT,
 )
+
+_LOGGER = logging.getLogger(__name__)
 
 DISCOVERY_REQUEST = b"\x00\x00\x00\x03\x03\x00\x00\x03"
 
@@ -282,22 +285,32 @@ class GizwitsLocal:
         return state
 
     # -- writing
-    def write(self, **values) -> tuple[bool, dict]:
-        """Write datapoints by read-modify-write of the whole 48-byte buffer.
+    def write(self, **values) -> dict:
+        """Write datapoints with a Gizwits partial-update control frame.
 
-        The device expects the complete buffer, so never send zeroes: that would
-        wipe power_para1 (the power calibration value).
+        Frame payload (cmd 0x93), per the Gizwits p0 protocol:
+            seq(4B) + 0x01 (control action) + attrFlags(bitmap) + attrVals(48B)
+
+        attrFlags is a big-endian bitmap indexed by datapoint id; attrVals is the
+        *complete* attribute buffer, so it is read first and only the target
+        field is patched. Sending a short or zeroed buffer wipes power_para1 (the
+        power calibration value) — this heater stores 98636 there.
+
+        Returns the state read back from the device. Raises GizwitsError unless
+        the readback actually shows the new value: the ACK alone proves nothing.
         """
-        known = {a[0] for a in ATTRS}
-        unknown = set(values) - known
+        from .const import ATTR_BY_NAME, ATTR_IDS
+
+        unknown = set(values) - set(ATTR_BY_NAME)
         if unknown:
             raise GizwitsError(f"未知数据点：{sorted(unknown)}")
 
+        expected: dict[str, float | int] = {}
         self._raw = None
         raw = bytearray(self.read_raw())
+        flags = 0
         for name, value in values.items():
-            attr = next(a for a in ATTRS if a[0] == name)
-            _n, dtype, off, length, bit_off, unit, writable, _desc = attr
+            _n, dtype, off, length, bit_off, unit, writable, _desc = ATTR_BY_NAME[name]
             if not writable:
                 raise GizwitsError(f"{name} 是只读字段")
             if name in TEMP_FIELDS:
@@ -309,14 +322,34 @@ class GizwitsLocal:
                 raw[0:2] = current.to_bytes(2, "big")
             else:
                 raw[off:off + length] = int(value).to_bytes(length, "big")
+            flags |= 1 << ATTR_IDS[name]
+            expected[name] = value / 100 if name in TEMP_FIELDS else int(value)
 
-        got, payload = self._request(0x93, bytes(raw), want=(0x93, 0x94))
-        ok = got in (0x93, 0x94) and (not payload or payload[0] == 0)
+        flag_bytes = max(ATTR_IDS.values()) // 8 + 1
+        seq = struct.pack(">I", int(time.time() * 1000) & 0xFFFF)
+        payload = seq + b"\x01" + flags.to_bytes(flag_bytes, "big") + bytes(raw)
+
+        got, resp = self._request(0x93, payload, want=(0x93, 0x94))
+        _LOGGER.debug("控制帧 %s → 应答 cmd=0x%02x %s", payload.hex(), got, resp.hex())
+        if len(resp) >= 4 and resp[:4] != seq:
+            raise GizwitsError("控制应答序号不匹配")
+
         self._raw = None
         self.close()  # the device accepts a single local connection only
-        # confirm with a fresh session: only the readback counts
         with GizwitsLocal(self.host, self.port, self.timeout) as verify:
-            return ok, verify.read_state()
+            state = verify.read_state()
+
+        wrong = [
+            f"{name}={state.get(name)!r}（期望 {want!r}）"
+            for name, want in expected.items()
+            if abs(float(state.get(name) or 0) - float(want)) > 0.01
+        ]
+        if wrong:
+            raise GizwitsError(
+                f"设备没有接受写入（应答 cmd=0x{got:02x} {resp.hex() or '空'}），"
+                "回读值未变化：" + ", ".join(wrong)
+            )
+        return state
 
 
 def _describe_faults(state: dict) -> list[str]:
