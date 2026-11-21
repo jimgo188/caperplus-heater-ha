@@ -154,8 +154,14 @@ class FakeDevice(threading.Thread):
                     seq = payload[:4]
                     assert payload[4] == 0x01, f"control action byte: {payload[4]:#x}"
                     self.flags.append(int.from_bytes(payload[5:9], "big"))
-                    self.buffer[0:24] = payload[9:33]  # 可写前缀
-                    conn.sendall(giz.build_packet(0x94, seq + b"\x01" + payload[5:9] + payload[9:33]))
+                    body = payload[9:33]  # 可写前缀
+
+                    def apply_later(buf=body):
+                        time.sleep(1.0)  # 真机写后 ≤2s 才生效
+                        self.buffer[0:24] = buf
+
+                    threading.Thread(target=apply_later, daemon=True).start()
+                    conn.sendall(giz.build_packet(0x94, seq + b"\x01" + payload[5:9] + body))
 
 
 fake = FakeDevice()

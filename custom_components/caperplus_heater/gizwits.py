@@ -31,6 +31,8 @@ from .const import (
     TCP_PORT,
     TEMP_FIELDS,
     UDP_PORT,
+    VERIFY_POLL_INTERVAL,
+    VERIFY_TIMEOUT,
     WRITABLE_LEN,
 )
 
@@ -224,7 +226,7 @@ class GizwitsLocal:
         wanted = None if want is None else ((want,) if isinstance(want, int) else want)
         self._sock.sendall(build_packet(cmd, payload))
         last = None
-        for _ in range(6):
+        for _ in range(10):
             got, data = self._recv_packet()
             last = got
             if wanted is None or got in wanted:
@@ -292,15 +294,17 @@ class GizwitsLocal:
         Frame payload (cmd 0x93), per the Gizwits p0 protocol:
             seq(4B) + 0x01 (control action) + attrFlags(bitmap) + attrVals
 
-        attrFlags is a big-endian bitmap indexed by datapoint id. attrVals must be
-        the *writable prefix* of the attribute buffer (here 24 bytes, ending at
-        power_para1) — this heater silently ignores a frame that also carries the
-        read-only tail, answering only with the sequence number. The buffer is
-        read first and only the target field is patched, so power_para1 (power
-        calibration, 98636) survives.
+        attrFlags is the **write mask**: only the datapoint ids flagged in it get
+        applied, so every field we change must set its bit. attrVals carries the
+        writable prefix of the attribute buffer (24 bytes here, ending at
+        power_para1); the buffer is read first and only the target fields are
+        patched, so power_para1 (power calibration, 98636) survives.
 
-        Returns the state read back from the device. Raises GizwitsError unless
-        the readback actually shows the new value: the ACK alone proves nothing.
+        The device applies the write up to ~2 s after the ACK, and the 0x91
+        frames it pushes post-write are pre-write snapshots — so verification
+        re-reads with a fresh 0x90 in a loop instead of trusting the first read.
+
+        Returns the state that actually shows the new values.
         """
         from .const import ATTR_BY_NAME, ATTR_IDS
 
@@ -332,27 +336,43 @@ class GizwitsLocal:
         seq = struct.pack(">I", int(time.time() * 1000) & 0xFFFF)
         payload = seq + b"\x01" + flags.to_bytes(flag_bytes, "big") + bytes(raw[:WRITABLE_LEN])
 
-        got, resp = self._request(0x93, payload, want=(0x93, 0x94))
-        _LOGGER.debug("控制帧 %s → 应答 cmd=0x%02x %s", payload.hex(), got, resp.hex())
-        if len(resp) >= 4 and resp[:4] != seq:
-            raise GizwitsError("控制应答序号不匹配")
+        ack = "无应答"
+        try:
+            got, resp = self._request(0x93, payload, want=(0x93, 0x94))
+            ack = f"应答 cmd=0x{got:02x} {resp.hex() or '空'}"
+            _LOGGER.debug("控制帧 %s → %s", payload.hex(), ack)
+            if len(resp) >= 4 and resp[:4] != seq:
+                raise GizwitsError(f"控制应答序号不匹配（{ack}）")
+        except DeviceBusy as err:
+            # The write may still land even when the ACK is lost; verify anyway.
+            ack = f"没收到应答（{err}）"
+            _LOGGER.warning("控制帧没有收到应答，改为回读确认：%s", err)
 
         self._raw = None
         self.close()  # the device accepts a single local connection only
-        with GizwitsLocal(self.host, self.port, self.timeout) as verify:
-            state = verify.read_state()
 
-        wrong = [
-            f"{name}={state.get(name)!r}（期望 {want!r}）"
-            for name, want in expected.items()
-            if abs(float(state.get(name) or 0) - float(want)) > 0.01
-        ]
-        if wrong:
-            raise GizwitsError(
-                f"设备没有接受写入（应答 cmd=0x{got:02x} {resp.hex() or '空'}），"
-                "回读值未变化：" + ", ".join(wrong)
-            )
-        return state
+        deadline = time.monotonic() + VERIFY_TIMEOUT
+        state: dict = {}
+        wrong: list[str] = []
+        while True:
+            try:
+                with GizwitsLocal(self.host, self.port, self.timeout) as verify:
+                    state = verify.read_state()
+            except DeviceBusy as err:
+                wrong = [f"回读失败：{err}"]
+            else:
+                wrong = [
+                    f"{name}={state.get(name)!r}（期望 {want!r}）"
+                    for name, want in expected.items()
+                    if abs(float(state.get(name) or 0) - float(want)) > 0.01
+                ]
+                if not wrong:
+                    return state
+            if time.monotonic() > deadline:
+                break
+            time.sleep(VERIFY_POLL_INTERVAL)
+
+        raise GizwitsError(f"设备没有接受写入（{ack}），回读不一致：" + ", ".join(wrong))
 
 
 def _describe_faults(state: dict) -> list[str]:
