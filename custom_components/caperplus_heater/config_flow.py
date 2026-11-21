@@ -48,7 +48,7 @@ class CaperplusConfigFlow(ConfigFlow, domain=DOMAIN):
                 _LOGGER.exception("配置时发生意外错误")
                 errors["base"] = "unknown"
             else:
-                await self.async_set_unique_id(info["mac"] or info["ip"])
+                await self.async_set_unique_id(info.get("mac") or info["ip"])
                 self._abort_if_unique_id_configured(updates={CONF_HOST: info["ip"]})
                 return self.async_create_entry(
                     title=name or MODEL,
