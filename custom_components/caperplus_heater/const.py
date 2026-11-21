@@ -70,13 +70,9 @@ ATTRS: list[tuple[str, str, int, int, int, str, bool, str]] = [
 ATTR_IDS = {name: index for index, (name, *_rest) in enumerate(ATTRS)}
 ATTR_BY_NAME = {attr[0]: attr for attr in ATTRS}
 
-# 控制帧里的 attrVals 只带「可写那一段」：设备实测只认到 power_para1 结束的 24 字节，
-# 多发的只读尾巴（24..47）会让它整帧忽略，只回一个序号了事。
-WRITABLE_LEN = max(
-    off + length
-    for _name, _dtype, off, length, _bit, unit, writable, _desc in ATTRS
-    if writable and unit == "byte"
-)
+# 控制帧头固定 7 字节：seq(4) + 动作(1) + attrFlags(F)。设备就按这个位置硬切，
+# F 只由「可写数据点的最大 id」决定（本产品 id 0..15 可写 → 2 字节）。
+FLAG_BYTES = (max(ATTR_IDS[name] for name in ATTR_BY_NAME if ATTR_BY_NAME[name][6]) + 1 + 7) // 8
 
 TEMP_FIELDS = {"temp", "temp1", "temp2", "temp_pid", "temp_min", "temp_max", "treatment_temp"}
 

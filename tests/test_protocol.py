@@ -153,15 +153,15 @@ class FakeDevice(threading.Thread):
                     self.writes.append(payload)
                     seq = payload[:4]
                     assert payload[4] == 0x01, f"control action byte: {payload[4]:#x}"
-                    self.flags.append(int.from_bytes(payload[5:9], "big"))
-                    body = payload[9:33]  # 可写前缀
+                    self.flags.append(int.from_bytes(payload[5:7], "big"))
+                    body = payload[7:55]  # 48 字节全量
 
                     def apply_later(buf=body):
                         time.sleep(1.0)  # 真机写后 ≤2s 才生效
                         self.buffer[0:24] = buf
 
                     threading.Thread(target=apply_later, daemon=True).start()
-                    conn.sendall(giz.build_packet(0x94, seq + b"\x01" + payload[5:9] + body))
+                    conn.sendall(giz.build_packet(0x94, seq))
 
 
 fake = FakeDevice()
@@ -179,7 +179,7 @@ dev = giz.GizwitsLocal("127.0.0.1", port=fake.port)
 after = dev.write(temp_pid=26.0)
 dev.close()
 check("写入帧数量", len(fake.writes), 1)
-check("写入帧长度", len(fake.writes[0]), 4 + 1 + 4 + 24)
+check("写入帧长度", len(fake.writes[0]), 4 + 1 + 2 + 48)
 check("action byte", fake.writes[0][4], 0x01)
 check("attrFlags(temp_pid id=10)", fake.flags[0], 1 << 10)  # 位图按 id 编号
 check("回读 temp_pid", after["temp_pid"], 26.0)
@@ -204,6 +204,30 @@ except giz.GizwitsError as err:
     check("只读字段被拒绝", "只读" in str(err), True)
 finally:
     dev.close()
+
+# --------------------------------------------------------------- 3b. 复现真机定版控制帧
+print("3b. 复现真机抓到的 0x93 帧（temp_pid=23.90）")
+# 用抓包里的原始 48 字节，避免手抄出错
+REAL_DATA = bytes.fromhex(
+    "2401000000010004"
+    "0000095608980d48"
+    "0af000000001814c"
+    "0700000000630000"
+    "00000960096b0960"
+    "00000000000000a0"
+)
+check("抓包数据长度", len(REAL_DATA), 48)
+REAL_SEQ = bytes.fromhex("00001a2b")
+real_frame = bytes.fromhex("00000003" "3a" "00" "0093") + REAL_SEQ + b"\x01" + (1 << 10).to_bytes(2, "big") + REAL_DATA
+check("抓包整帧长度", len(real_frame), 63)
+
+built = giz.build_packet(0x93, REAL_SEQ + b"\x01" + (1 << 10).to_bytes(const.FLAG_BYTES, "big") + REAL_DATA)
+check("FLAG_BYTES", const.FLAG_BYTES, 2)
+check("重建帧与真机字节完全一致", built, real_frame)
+check("长度字段 0x3a", built[4], 0x3A)
+check("flags 字节位置", built[13:15], b"\x04\x00")
+check("data 起点", built[15:17], b"\x24\x01")
+check("data[10:12] = 23.90°C", int.from_bytes(REAL_DATA[10:12], "big"), 2390)
 
 # --------------------------------------------------------------- 4. 发现包解析
 print("4. 发现包解析")

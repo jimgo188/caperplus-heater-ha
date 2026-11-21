@@ -90,15 +90,15 @@ class FakeHeater(threading.Thread):
                     writes.append(payload)
                     seq = payload[:4]
                     assert payload[4] == 0x01
-                    flags.append(int.from_bytes(payload[5:9], "big"))
-                    body = payload[9:33]
+                    flags.append(int.from_bytes(payload[5:7], "big"))
+                    body = payload[7:55]
 
                     def apply_later(buf=body):
                         time.sleep(1.0)  # 真机写后 ≤2s 才生效
                         self.buffer[0:24] = buf
 
                     threading.Thread(target=apply_later, daemon=True).start()
-                    conn.sendall(gizwits.build_packet(0x94, seq + b"\x01" + payload[5:9] + body))
+                    conn.sendall(gizwits.build_packet(0x94, seq))
 
 
 class ListHandler(logging.Handler):
@@ -190,10 +190,10 @@ async def main() -> int:
     check("写入帧数 +1", write_count, before + 1)
     if writes:
         payload = writes[-1]
-        check("写入帧长度", len(payload), 33)
+        check("写入帧长度", len(payload), 4 + 1 + 2 + 48)
         check("action byte", payload[4], 0x01)
         check("attrFlags(temp_pid)", flags[-1], 1 << 10)
-        body = payload[9:33]
+        body = payload[7:55]
         check("temp_pid 已改", int.from_bytes(body[10:12], "big"), 2650)
         check("power_para1 未被破坏", int.from_bytes(body[20:24], "big"), 98636)
     await asyncio.sleep(0.5)
@@ -209,7 +209,7 @@ async def main() -> int:
     state = hass.states.get(climate_id)
     check("状态为 off", state.state, "off")
     if writes:
-        check("dev_config bit0 = 1", writes[-1][9 + 4] & 0x01, 1)
+        check("dev_config bit0 = 1", writes[-1][7 + 4] & 0x01, 1)
 
     print("6. 卸载", flush=True)
     unloaded = await hass.config_entries.async_unload(entry_id)

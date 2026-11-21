@@ -30,10 +30,10 @@ from .const import (
     PRODUCT_KEY,
     TCP_PORT,
     TEMP_FIELDS,
+    FLAG_BYTES,
     UDP_PORT,
     VERIFY_POLL_INTERVAL,
     VERIFY_TIMEOUT,
-    WRITABLE_LEN,
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -226,11 +226,16 @@ class GizwitsLocal:
         wanted = None if want is None else ((want,) if isinstance(want, int) else want)
         self._sock.sendall(build_packet(cmd, payload))
         last = None
-        for _ in range(10):
+        deadline = time.monotonic() + self.timeout
+        # 设备推送数量不固定（实测 0~3 个 0x09/0x91），所以按 cmd 过滤、按时间收尾，
+        # 不设固定丢帧数；50 只是防死循环的宽松上限。
+        for _ in range(50):
             got, data = self._recv_packet()
             last = got
             if wanted is None or got in wanted:
                 return got, data
+            if time.monotonic() > deadline:
+                break
         expected = "/".join(f"0x{c:02x}" for c in wanted) if wanted else "任一"
         raise GizwitsError(f"等待 cmd={expected} 超时，最后收到 0x{last:02x}" if last else "无响应")
 
@@ -291,14 +296,18 @@ class GizwitsLocal:
     def write(self, **values) -> dict:
         """Write datapoints with a Gizwits partial-update control frame.
 
-        Frame payload (cmd 0x93), per the Gizwits p0 protocol:
-            seq(4B) + 0x01 (control action) + attrFlags(bitmap) + attrVals
+        Frame payload (cmd 0x93), captured from the working vendor app:
+            seq(4B) + 0x01 (control action) + attrFlags(2B) + attrVals(48B)
 
-        attrFlags is the **write mask**: only the datapoint ids flagged in it get
-        applied, so every field we change must set its bit. attrVals carries the
-        writable prefix of the attribute buffer (24 bytes here, ending at
-        power_para1); the buffer is read first and only the target fields are
-        patched, so power_para1 (power calibration, 98636) survives.
+        The device slices the payload at a fixed 7-byte header
+        (bitmap = payload[5:7], data = payload[7:55]), so attrFlags **must** be
+        exactly FLAG_BYTES (2 here: writable ids are 0..15). A 4- or 8-byte
+        bitmap shifts the whole data区 and the device sees an empty mask — it
+        ACKs with the bare sequence number and writes nothing.
+
+        attrFlags is the write mask: only flagged datapoint ids are applied, so
+        every field we change sets its bit. attrVals is the full 48-byte buffer,
+        read first and patched in place, so power_para1 (98636) survives.
 
         The device applies the write up to ~2 s after the ACK, and the 0x91
         frames it pushes post-write are pre-write snapshots — so verification
@@ -332,13 +341,12 @@ class GizwitsLocal:
             flags |= 1 << ATTR_IDS[name]
             expected[name] = value / 100 if name in TEMP_FIELDS else int(value)
 
-        flag_bytes = max(ATTR_IDS.values()) // 8 + 1
         seq = struct.pack(">I", int(time.time() * 1000) & 0xFFFF)
-        payload = seq + b"\x01" + flags.to_bytes(flag_bytes, "big") + bytes(raw[:WRITABLE_LEN])
+        payload = seq + b"\x01" + flags.to_bytes(FLAG_BYTES, "big") + bytes(raw)
 
         ack = "无应答"
         try:
-            got, resp = self._request(0x93, payload, want=(0x93, 0x94))
+            got, resp = self._request(0x93, payload, want=0x94)
             ack = f"应答 cmd=0x{got:02x} {resp.hex() or '空'}"
             _LOGGER.debug("控制帧 %s → %s", payload.hex(), ack)
             if len(resp) >= 4 and resp[:4] != seq:
